@@ -13,6 +13,7 @@ setup(name='tap-postgres',
           'psycopg2==2.7.4',
           'strict-rfc3339==0.7',
           'nose==1.3.7'
+          'shapely==1.6.4'
       ],
       entry_points='''
           [console_scripts]
