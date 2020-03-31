@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # pylint: disable=missing-docstring,not-an-iterable,too-many-locals,too-many-arguments,invalid-name,too-many-return-statements,too-many-branches,len-as-condition,too-many-nested-blocks,wrong-import-order,duplicate-code, anomalous-backslash-in-string, too-many-statements, singleton-comparison, consider-using-in  # noqa
 
+from tap_postgres.logger import LOGGER
 import singer
 import datetime
 import decimal
@@ -16,10 +17,6 @@ from select import select
 from functools import reduce
 import json
 import re
-
-LOGGER = singer.get_logger()
-
-UPDATE_BOOKMARK_PERIOD = 1000
 
 
 def get_pg_version(cur):
@@ -436,7 +433,7 @@ def sync_tables(conn_info, logical_streams, state, end_lsn):
                     # msg has been consumed. it has been processed
                     last_lsn_processed = msg.data_start
                     rows_saved = rows_saved + 1
-                    if rows_saved % UPDATE_BOOKMARK_PERIOD == 0:
+                    if rows_saved % conn_info["emit_state_every_n_rows"] == 0:
                         singer.write_message(singer.StateMessage(value=copy.deepcopy(state)))
 
                 else:

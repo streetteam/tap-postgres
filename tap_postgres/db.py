@@ -1,3 +1,4 @@
+from tap_postgres.logger import LOGGER
 import datetime
 import decimal
 import math
@@ -5,8 +6,6 @@ import psycopg2
 import psycopg2.extras
 import singer
 from shapely import wkb
-
-LOGGER = singer.get_logger()
 
 cursor_iter_size = 20000
 include_schemas_in_destination_stream_name = False

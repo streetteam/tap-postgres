@@ -1,6 +1,5 @@
 import unittest
 import tap_postgres
-import tap_postgres.sync_strategies.full_table as full_table
 import tap_postgres.sync_strategies.common as pg_common
 import singer
 from singer import get_logger
@@ -64,7 +63,6 @@ def do_not_dump_catalog(catalog):
 
 
 tap_postgres.dump_catalog = do_not_dump_catalog
-full_table.UPDATE_BOOKMARK_PERIOD = 1
 
 
 class LogicalInterruption(unittest.TestCase):
@@ -90,6 +88,7 @@ class LogicalInterruption(unittest.TestCase):
         pg_common.write_schema_message = singer_write_message_ok
 
         conn_config = get_test_connection_config()
+        conn_config["emit_state_every_n_rows"] = 1
         streams = tap_postgres.do_discovery(conn_config)
         cow_stream = [s for s in streams if s["table_name"] == "COW"][0]
         self.assertIsNotNone(cow_stream)
@@ -113,7 +112,7 @@ class LogicalInterruption(unittest.TestCase):
         # the initial phase of cows logical replication will be a full table.
         # it will sync the first record and then blow up on the 2nd record
         try:
-            tap_postgres.do_sync(get_test_connection_config(), {"streams": streams}, None, state)
+            tap_postgres.do_sync(conn_config, {"streams": streams}, None, state)
         except Exception:
             blew_up_on_cow = True
 
@@ -156,7 +155,7 @@ class LogicalInterruption(unittest.TestCase):
         global COW_RECORD_COUNT
         COW_RECORD_COUNT = 0
         CAUGHT_MESSAGES.clear()
-        tap_postgres.do_sync(get_test_connection_config(), {"streams": streams}, None, old_state)
+        tap_postgres.do_sync(conn_config, {"streams": streams}, None, old_state)
 
         self.assertEqual(8, len(CAUGHT_MESSAGES))
 
@@ -250,6 +249,7 @@ class FullTableInterruption(unittest.TestCase):
         pg_common.write_schema_message = singer_write_message_ok
 
         conn_config = get_test_connection_config()
+        conn_config["emit_state_every_n_rows"] = 1
         streams = tap_postgres.do_discovery(conn_config)
         cow_stream = [s for s in streams if s["table_name"] == "COW"][0]
         self.assertIsNotNone(cow_stream)
@@ -278,7 +278,7 @@ class FullTableInterruption(unittest.TestCase):
         state = {}
         # this will sync the CHICKEN but then blow up on the COW
         try:
-            tap_postgres.do_sync(get_test_connection_config(), {"streams": streams}, None, state)
+            tap_postgres.do_sync(conn_config, {"streams": streams}, None, state)
         except Exception:
             # LOGGER.exception(ex)
             blew_up_on_cow = True
@@ -342,7 +342,7 @@ class FullTableInterruption(unittest.TestCase):
         global COW_RECORD_COUNT
         COW_RECORD_COUNT = 0
 
-        tap_postgres.do_sync(get_test_connection_config(), {"streams": streams}, None, old_state)
+        tap_postgres.do_sync(conn_config, {"streams": streams}, None, old_state)
 
         self.assertEqual(CAUGHT_MESSAGES[0]["type"], "SCHEMA")
         self.assertTrue(isinstance(CAUGHT_MESSAGES[1], singer.StateMessage))

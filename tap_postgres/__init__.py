@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # pylint: disable=missing-docstring,not-an-iterable,too-many-locals,too-many-arguments,invalid-name,too-many-return-statements,too-many-branches,len-as-condition,too-many-statements,broad-except,unnecessary-lambda  # noqa
 
+from tap_postgres.logger import LOGGER
+import singer
+import logging
 import json
 import sys
 import collections
@@ -8,7 +11,6 @@ import itertools
 import copy
 import psycopg2
 import psycopg2.extras
-import singer
 import singer.schema
 from singer import utils, metadata, get_bookmark
 
@@ -17,8 +19,6 @@ import tap_postgres.sync_strategies.full_table as full_table
 import tap_postgres.sync_strategies.incremental as incremental
 import tap_postgres.db as post_db
 import tap_postgres.sync_strategies.common as sync_common
-
-LOGGER = singer.get_logger()
 
 # LogMiner do not support LONG, LONG RAW, CLOB, BLOB, NCLOB, ADT, or COLLECTION datatypes.
 Column = collections.namedtuple(
@@ -825,9 +825,12 @@ def main_impl():
         "port": args.config["port"],
         "dbname": args.config["dbname"],
         "filter_dbs": args.config.get("filter_dbs"),
+        "emit_state_every_n_rows": int(args.config.get("emit_state_every_n_rows", 1000)),
         "debug_lsn": args.config.get("debug_lsn") == "true",
         "logical_poll_total_seconds": float(args.config.get("logical_poll_total_seconds", 0)),
     }
+
+    LOGGER.setLevel(getattr(logging, args.config.get("loglevel", "INFO").upper(), logging.INFO))
 
     if args.config.get("ssl") == "true":
         conn_config["sslmode"] = "require"
@@ -844,7 +847,7 @@ def main_impl():
         state = args.state
         do_sync(conn_config, args.properties, args.config.get("default_replication_method"), state)
     else:
-        LOGGER.info("No properties were selected")
+        LOGGER.error("No properties were selected")
 
 
 def main():

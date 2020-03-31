@@ -1,3 +1,4 @@
+from tap_postgres.logger import LOGGER
 import copy
 import time
 import psycopg2
@@ -6,11 +7,6 @@ import singer
 from singer import utils
 import singer.metrics as metrics
 import tap_postgres.db as post_db
-
-
-LOGGER = singer.get_logger()
-
-UPDATE_BOOKMARK_PERIOD = 1000
 
 
 def fetch_max_replication_key(conn_config, replication_key, schema_name, table_name):
@@ -121,7 +117,7 @@ def sync_table(conn_info, stream, state, desired_columns, md_map):
                             record_message.record[replication_key],
                         )
 
-                    if rows_saved % UPDATE_BOOKMARK_PERIOD == 0:
+                    if rows_saved % conn_info["emit_state_every_n_rows"] == 0:
                         singer.write_message(singer.StateMessage(value=copy.deepcopy(state)))
 
                     counter.increment()

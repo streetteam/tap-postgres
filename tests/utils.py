@@ -34,6 +34,7 @@ def get_test_connection_config(target_db="postgres"):
     conn_config["password"] = os.environ.get("TAP_POSTGRES_PASSWORD")
     conn_config["port"] = os.environ.get("TAP_POSTGRES_PORT")
     conn_config["dbname"] = target_db
+    conn_config["emit_state_every_n_rows"] = 1000
     return conn_config
 
 
