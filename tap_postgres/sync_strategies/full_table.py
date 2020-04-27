@@ -142,6 +142,7 @@ def sync_table(conn_info, stream, state, desired_columns, md_map):
 
                 LOGGER.info("select %s with itersize %s", select_sql, cur.itersize)
                 cur.execute(select_sql)
+                LOGGER.info("Query returned - processing results")
 
                 rows_saved = 0
                 for rec in cur:
@@ -158,11 +159,16 @@ def sync_table(conn_info, stream, state, desired_columns, md_map):
 
                     counter.increment()
 
+                LOGGER.info("Processing complete - saved {} rows".format(rows_saved))
+
     # once we have completed the full table replication, discard the xmin bookmark.
     # the xmin bookmark only comes into play when a full table replication is interrupted
+    LOGGER.info("Writing bookmark")
     state = singer.write_bookmark(state, stream["tap_stream_id"], "xmin", None)
 
     # always send the activate version whether first run or subsequent
+    LOGGER.info("Sending activate version message")
     singer.write_message(activate_version_message)
 
+    LOGGER.info("Full table sync complete")
     return state
