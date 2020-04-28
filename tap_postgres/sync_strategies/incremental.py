@@ -96,6 +96,7 @@ def sync_table(conn_info, stream, state, desired_columns, md_map):
 
                 LOGGER.info("select statement: %s with itersize %s", select_sql, cur.itersize)
                 cur.execute(select_sql)
+                LOGGER.info("Query returned - processing results")
 
                 rows_saved = 0
 
@@ -122,4 +123,5 @@ def sync_table(conn_info, stream, state, desired_columns, md_map):
 
                     counter.increment()
 
+    LOGGER.info("Incremental table tap complete")
     return state
