@@ -170,5 +170,5 @@ def sync_table(conn_info, stream, state, desired_columns, md_map):
     LOGGER.info("Sending activate version message")
     singer.write_message(activate_version_message)
 
-    LOGGER.info("Full table sync complete")
+    LOGGER.info("Full table tap complete")
     return state
