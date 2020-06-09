@@ -40,7 +40,6 @@ class Unsupported(unittest.TestCase):
                     {"name": "circle_col", "type": "circle"},
                     {"name": "xml_col", "type": "xml"},
                     {"name": "composite_col", "type": "person_composite"},
-                    {"name": "int_range_col", "type": "int4range"},
                 ],
                 "name": Unsupported.table_name,
             }
@@ -91,11 +90,6 @@ class Unsupported(unittest.TestCase):
                 },
                 ("properties", "xml_col"): {
                     "sql-datatype": "xml",
-                    "selected-by-default": False,
-                    "inclusion": "unsupported",
-                },
-                ("properties", "int_range_col"): {
-                    "sql-datatype": "int4range",
                     "selected-by-default": False,
                     "inclusion": "unsupported",
                 },

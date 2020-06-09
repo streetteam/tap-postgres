@@ -8,7 +8,7 @@ from shapely import wkb
 
 import singer
 
-from tap_postgres import RANGE_TYPES
+from tap_postgres.constants import RANGE_TYPES
 from tap_postgres.logger import LOGGER
 
 cursor_iter_size = 20000

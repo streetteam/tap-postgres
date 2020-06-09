@@ -20,6 +20,7 @@ import tap_postgres.sync_strategies.common as sync_common
 import tap_postgres.sync_strategies.full_table as full_table
 import tap_postgres.sync_strategies.incremental as incremental
 import tap_postgres.sync_strategies.logical_replication as logical_replication
+from tap_postgres.constants import FLOAT_TYPES, INTEGER_TYPES, JSON_TYPES, RANGE_TYPES
 from tap_postgres.logger import LOGGER
 
 # LogMiner do not support LONG, LONG RAW, CLOB, BLOB, NCLOB, ADT, or COLLECTION datatypes.
@@ -39,21 +40,6 @@ Column = collections.namedtuple(
 
 
 REQUIRED_CONFIG_KEYS = ["dbname", "host", "port", "user", "password"]
-
-
-INTEGER_TYPES = {"integer", "smallint", "bigint"}
-FLOAT_TYPES = {"real", "double precision"}
-JSON_TYPES = {"json", "jsonb"}
-
-# https://www.postgresql.org/docs/11/rangetypes.html
-RANGE_TYPES = {
-    "int4range",  # Range of integer
-    "int8range",  # Range of bigint
-    "numrange",  # Range of numeric
-    "tsrange",  # Range of timestamp without time zone
-    "tstzrange",  # Range of timestamp with time zone
-    "daterange",  # Range of date
-}
 
 
 def nullable_column(col_type, pk):
