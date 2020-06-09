@@ -1,4 +1,3 @@
-from tap_postgres.logger import LOGGER
 import datetime
 import decimal
 import math
@@ -6,6 +5,9 @@ import psycopg2
 import psycopg2.extras
 import singer
 from shapely import wkb
+
+from tap_postgres import RANGE_TYPES
+from tap_postgres.logger import LOGGER
 
 cursor_iter_size = 20000
 include_schemas_in_destination_stream_name = False
@@ -80,6 +82,8 @@ def selected_value_to_singer_value_impl(elem, sql_datatype):
         cleaned_elem = elem
     elif sql_datatype == "geometry":
         cleaned_elem = wkb.loads(elem, hex=True).wkt
+    elif sql_datatype in RANGE_TYPES:
+        cleaned_elem = str(elem)
     elif sql_datatype == "money":
         cleaned_elem = elem
     elif isinstance(elem, datetime.datetime):
