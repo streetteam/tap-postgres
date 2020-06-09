@@ -1,11 +1,14 @@
 import unittest
-import tap_postgres
-from singer import get_logger, metadata
+
 from tests.utils import (
-    get_test_connection,
     ensure_test_table,
+    get_test_connection,
     get_test_connection_config,
 )
+
+from singer import get_logger, metadata
+
+import tap_postgres
 
 LOGGER = get_logger()
 
@@ -37,14 +40,15 @@ class Unsupported(unittest.TestCase):
                     {"name": "circle_col", "type": "circle"},
                     {"name": "xml_col", "type": "xml"},
                     {"name": "composite_col", "type": "person_composite"},
-                    {"name": "int_range_col", "type": "int4range"},
                 ],
                 "name": Unsupported.table_name,
             }
             with get_test_connection() as conn:
                 cur = conn.cursor()
                 cur.execute("""     DROP TYPE IF EXISTS person_composite CASCADE """)
-                cur.execute("""     CREATE TYPE person_composite AS (age int, name text) """)
+                cur.execute(
+                    """     CREATE TYPE person_composite AS (age int, name text) """
+                )
 
             ensure_test_table(table_spec)
 
@@ -86,11 +90,6 @@ class Unsupported(unittest.TestCase):
                 },
                 ("properties", "xml_col"): {
                     "sql-datatype": "xml",
-                    "selected-by-default": False,
-                    "inclusion": "unsupported",
-                },
-                ("properties", "int_range_col"): {
-                    "sql-datatype": "int4range",
                     "selected-by-default": False,
                     "inclusion": "unsupported",
                 },

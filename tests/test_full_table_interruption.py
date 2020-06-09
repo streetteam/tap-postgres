@@ -1,8 +1,10 @@
 import unittest
-import tap_postgres
-import tap_postgres.sync_strategies.common as pg_common
+
 import singer
 from singer import get_logger
+
+import tap_postgres
+import tap_postgres.sync_strategies.common as pg_common
 
 try:
     from tests.utils import (
@@ -122,22 +124,30 @@ class LogicalInterruption(unittest.TestCase):
 
         self.assertEqual(CAUGHT_MESSAGES[0]["type"], "SCHEMA")
         self.assertTrue(isinstance(CAUGHT_MESSAGES[1], singer.StateMessage))
-        self.assertIsNone(CAUGHT_MESSAGES[1].value["bookmarks"]["postgres-public-COW"].get("xmin"))
+        self.assertIsNone(
+            CAUGHT_MESSAGES[1].value["bookmarks"]["postgres-public-COW"].get("xmin")
+        )
         self.assertIsNotNone(
             CAUGHT_MESSAGES[1].value["bookmarks"]["postgres-public-COW"].get("lsn")
         )
-        end_lsn = CAUGHT_MESSAGES[1].value["bookmarks"]["postgres-public-COW"].get("lsn")
+        end_lsn = (
+            CAUGHT_MESSAGES[1].value["bookmarks"]["postgres-public-COW"].get("lsn")
+        )
 
         self.assertTrue(isinstance(CAUGHT_MESSAGES[2], singer.ActivateVersionMessage))
         new_version = CAUGHT_MESSAGES[2].version
 
         self.assertTrue(isinstance(CAUGHT_MESSAGES[3], singer.RecordMessage))
-        self.assertEqual(CAUGHT_MESSAGES[3].record, {"colour": "blue", "id": 1, "name": "betty"})
+        self.assertEqual(
+            CAUGHT_MESSAGES[3].record, {"colour": "blue", "id": 1, "name": "betty"}
+        )
         self.assertEqual("COW", CAUGHT_MESSAGES[3].stream)
 
         self.assertTrue(isinstance(CAUGHT_MESSAGES[4], singer.StateMessage))
         # xmin is set while we are processing the full table replication
-        self.assertIsNotNone(CAUGHT_MESSAGES[4].value["bookmarks"]["postgres-public-COW"]["xmin"])
+        self.assertIsNotNone(
+            CAUGHT_MESSAGES[4].value["bookmarks"]["postgres-public-COW"]["xmin"]
+        )
         self.assertEqual(
             CAUGHT_MESSAGES[4].value["bookmarks"]["postgres-public-COW"]["lsn"], end_lsn
         )
@@ -163,28 +173,36 @@ class LogicalInterruption(unittest.TestCase):
 
         self.assertTrue(isinstance(CAUGHT_MESSAGES[1], singer.StateMessage))
         self.assertEqual(
-            CAUGHT_MESSAGES[1].value["bookmarks"]["postgres-public-COW"].get("xmin"), last_xmin
+            CAUGHT_MESSAGES[1].value["bookmarks"]["postgres-public-COW"].get("xmin"),
+            last_xmin,
         )
         self.assertEqual(
-            CAUGHT_MESSAGES[1].value["bookmarks"]["postgres-public-COW"].get("lsn"), end_lsn
+            CAUGHT_MESSAGES[1].value["bookmarks"]["postgres-public-COW"].get("lsn"),
+            end_lsn,
         )
         self.assertEqual(
-            CAUGHT_MESSAGES[1].value["bookmarks"]["postgres-public-COW"].get("version"), new_version
+            CAUGHT_MESSAGES[1].value["bookmarks"]["postgres-public-COW"].get("version"),
+            new_version,
         )
 
         self.assertTrue(isinstance(CAUGHT_MESSAGES[2], singer.RecordMessage))
-        self.assertEqual(CAUGHT_MESSAGES[2].record, {"colour": "brow", "id": 2, "name": "smelly"})
+        self.assertEqual(
+            CAUGHT_MESSAGES[2].record, {"colour": "brow", "id": 2, "name": "smelly"}
+        )
         self.assertEqual("COW", CAUGHT_MESSAGES[2].stream)
 
         self.assertTrue(isinstance(CAUGHT_MESSAGES[3], singer.StateMessage))
         self.assertTrue(
-            CAUGHT_MESSAGES[3].value["bookmarks"]["postgres-public-COW"].get("xmin"), last_xmin
+            CAUGHT_MESSAGES[3].value["bookmarks"]["postgres-public-COW"].get("xmin"),
+            last_xmin,
         )
         self.assertEqual(
-            CAUGHT_MESSAGES[3].value["bookmarks"]["postgres-public-COW"].get("lsn"), end_lsn
+            CAUGHT_MESSAGES[3].value["bookmarks"]["postgres-public-COW"].get("lsn"),
+            end_lsn,
         )
         self.assertEqual(
-            CAUGHT_MESSAGES[3].value["bookmarks"]["postgres-public-COW"].get("version"), new_version
+            CAUGHT_MESSAGES[3].value["bookmarks"]["postgres-public-COW"].get("version"),
+            new_version,
         )
 
         self.assertTrue(isinstance(CAUGHT_MESSAGES[4], singer.RecordMessage))
@@ -193,25 +211,32 @@ class LogicalInterruption(unittest.TestCase):
 
         self.assertTrue(isinstance(CAUGHT_MESSAGES[5], singer.StateMessage))
         self.assertTrue(
-            CAUGHT_MESSAGES[5].value["bookmarks"]["postgres-public-COW"].get("xmin") > last_xmin
+            CAUGHT_MESSAGES[5].value["bookmarks"]["postgres-public-COW"].get("xmin")
+            > last_xmin
         )
         self.assertEqual(
-            CAUGHT_MESSAGES[5].value["bookmarks"]["postgres-public-COW"].get("lsn"), end_lsn
+            CAUGHT_MESSAGES[5].value["bookmarks"]["postgres-public-COW"].get("lsn"),
+            end_lsn,
         )
         self.assertEqual(
-            CAUGHT_MESSAGES[5].value["bookmarks"]["postgres-public-COW"].get("version"), new_version
+            CAUGHT_MESSAGES[5].value["bookmarks"]["postgres-public-COW"].get("version"),
+            new_version,
         )
 
         self.assertTrue(isinstance(CAUGHT_MESSAGES[6], singer.ActivateVersionMessage))
         self.assertEqual(CAUGHT_MESSAGES[6].version, new_version)
 
         self.assertTrue(isinstance(CAUGHT_MESSAGES[7], singer.StateMessage))
-        self.assertIsNone(CAUGHT_MESSAGES[7].value["bookmarks"]["postgres-public-COW"].get("xmin"))
-        self.assertEqual(
-            CAUGHT_MESSAGES[7].value["bookmarks"]["postgres-public-COW"].get("lsn"), end_lsn
+        self.assertIsNone(
+            CAUGHT_MESSAGES[7].value["bookmarks"]["postgres-public-COW"].get("xmin")
         )
         self.assertEqual(
-            CAUGHT_MESSAGES[7].value["bookmarks"]["postgres-public-COW"].get("version"), new_version
+            CAUGHT_MESSAGES[7].value["bookmarks"]["postgres-public-COW"].get("lsn"),
+            end_lsn,
+        )
+        self.assertEqual(
+            CAUGHT_MESSAGES[7].value["bookmarks"]["postgres-public-COW"].get("version"),
+            new_version,
         )
 
 
@@ -311,15 +336,21 @@ class FullTableInterruption(unittest.TestCase):
         self.assertTrue(isinstance(CAUGHT_MESSAGES[6], singer.StateMessage))
         self.assertEqual(None, singer.get_currently_syncing(CAUGHT_MESSAGES[6].value))
         # xmin is cleared at the end of the full table replication
-        self.assertIsNone(CAUGHT_MESSAGES[6].value["bookmarks"]["postgres-public-CHICKEN"]["xmin"])
+        self.assertIsNone(
+            CAUGHT_MESSAGES[6].value["bookmarks"]["postgres-public-CHICKEN"]["xmin"]
+        )
 
         # cow messages
         self.assertEqual(CAUGHT_MESSAGES[7]["type"], "SCHEMA")
 
         self.assertEqual("COW", CAUGHT_MESSAGES[7]["stream"])
         self.assertTrue(isinstance(CAUGHT_MESSAGES[8], singer.StateMessage))
-        self.assertIsNone(CAUGHT_MESSAGES[8].value["bookmarks"]["postgres-public-COW"].get("xmin"))
-        self.assertEqual("postgres-public-COW", CAUGHT_MESSAGES[8].value["currently_syncing"])
+        self.assertIsNone(
+            CAUGHT_MESSAGES[8].value["bookmarks"]["postgres-public-COW"].get("xmin")
+        )
+        self.assertEqual(
+            "postgres-public-COW", CAUGHT_MESSAGES[8].value["currently_syncing"]
+        )
 
         self.assertTrue(isinstance(CAUGHT_MESSAGES[9], singer.ActivateVersionMessage))
         cow_version = CAUGHT_MESSAGES[9].version
@@ -330,7 +361,9 @@ class FullTableInterruption(unittest.TestCase):
 
         self.assertTrue(isinstance(CAUGHT_MESSAGES[11], singer.StateMessage))
         # xmin is set while we are processing the full table replication
-        self.assertIsNotNone(CAUGHT_MESSAGES[11].value["bookmarks"]["postgres-public-COW"]["xmin"])
+        self.assertIsNotNone(
+            CAUGHT_MESSAGES[11].value["bookmarks"]["postgres-public-COW"]["xmin"]
+        )
 
         self.assertEqual(CAUGHT_MESSAGES[12].record["name"], "smelly")
         self.assertEqual("COW", CAUGHT_MESSAGES[12].stream)
@@ -349,11 +382,15 @@ class FullTableInterruption(unittest.TestCase):
 
         # because we were interrupted, we do not switch versions
         self.assertEqual(
-            CAUGHT_MESSAGES[1].value["bookmarks"]["postgres-public-COW"]["version"], cow_version
+            CAUGHT_MESSAGES[1].value["bookmarks"]["postgres-public-COW"]["version"],
+            cow_version,
         )
-        self.assertIsNotNone(CAUGHT_MESSAGES[1].value["bookmarks"]["postgres-public-COW"]["xmin"])
+        self.assertIsNotNone(
+            CAUGHT_MESSAGES[1].value["bookmarks"]["postgres-public-COW"]["xmin"]
+        )
         self.assertEqual(
-            "postgres-public-COW", singer.get_currently_syncing(CAUGHT_MESSAGES[1].value)
+            "postgres-public-COW",
+            singer.get_currently_syncing(CAUGHT_MESSAGES[1].value),
         )
 
         self.assertTrue(isinstance(CAUGHT_MESSAGES[2], singer.RecordMessage))
@@ -363,9 +400,12 @@ class FullTableInterruption(unittest.TestCase):
         # after record: activate version, state with no xmin or currently syncing
         self.assertTrue(isinstance(CAUGHT_MESSAGES[3], singer.StateMessage))
         # we still have an xmin for COW because are not yet done with the COW table
-        self.assertIsNotNone(CAUGHT_MESSAGES[3].value["bookmarks"]["postgres-public-COW"]["xmin"])
+        self.assertIsNotNone(
+            CAUGHT_MESSAGES[3].value["bookmarks"]["postgres-public-COW"]["xmin"]
+        )
         self.assertEqual(
-            singer.get_currently_syncing(CAUGHT_MESSAGES[3].value), "postgres-public-COW"
+            singer.get_currently_syncing(CAUGHT_MESSAGES[3].value),
+            "postgres-public-COW",
         )
 
         self.assertTrue(isinstance(CAUGHT_MESSAGES[4], singer.RecordMessage))
@@ -373,9 +413,12 @@ class FullTableInterruption(unittest.TestCase):
         self.assertEqual("COW", CAUGHT_MESSAGES[4].stream)
 
         self.assertTrue(isinstance(CAUGHT_MESSAGES[5], singer.StateMessage))
-        self.assertIsNotNone(CAUGHT_MESSAGES[5].value["bookmarks"]["postgres-public-COW"]["xmin"])
+        self.assertIsNotNone(
+            CAUGHT_MESSAGES[5].value["bookmarks"]["postgres-public-COW"]["xmin"]
+        )
         self.assertEqual(
-            singer.get_currently_syncing(CAUGHT_MESSAGES[5].value), "postgres-public-COW"
+            singer.get_currently_syncing(CAUGHT_MESSAGES[5].value),
+            "postgres-public-COW",
         )
 
         # xmin is cleared because we are finished the full table replication
@@ -384,7 +427,9 @@ class FullTableInterruption(unittest.TestCase):
 
         self.assertTrue(isinstance(CAUGHT_MESSAGES[7], singer.StateMessage))
         self.assertIsNone(singer.get_currently_syncing(CAUGHT_MESSAGES[7].value))
-        self.assertIsNone(CAUGHT_MESSAGES[7].value["bookmarks"]["postgres-public-CHICKEN"]["xmin"])
+        self.assertIsNone(
+            CAUGHT_MESSAGES[7].value["bookmarks"]["postgres-public-CHICKEN"]["xmin"]
+        )
         self.assertIsNone(singer.get_currently_syncing(CAUGHT_MESSAGES[7].value))
 
 

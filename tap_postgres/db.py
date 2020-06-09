@@ -1,11 +1,15 @@
-from tap_postgres.logger import LOGGER
 import datetime
 import decimal
 import math
+
 import psycopg2
 import psycopg2.extras
-import singer
 from shapely import wkb
+
+import singer
+
+from tap_postgres.constants import RANGE_TYPES
+from tap_postgres.logger import LOGGER
 
 cursor_iter_size = 20000
 include_schemas_in_destination_stream_name = False
@@ -34,7 +38,9 @@ def fully_qualified_column_name(schema, table, column):
 
 
 def fully_qualified_table_name(schema, table):
-    return '"{}"."{}"'.format(canonicalize_identifier(schema), canonicalize_identifier(table))
+    return '"{}"."{}"'.format(
+        canonicalize_identifier(schema), canonicalize_identifier(table)
+    )
 
 
 def open_connection(conn_config, logical_replication=False):
@@ -54,7 +60,10 @@ def open_connection(conn_config, logical_replication=False):
         cfg["connection_factory"] = psycopg2.extras.LogicalReplicationConnection
 
     conn = psycopg2.connect(**cfg)
-    LOGGER.info("Connected with sslmode = %s", conn.get_dsn_parameters().get("sslmode", "unknown"))
+    LOGGER.info(
+        "Connected with sslmode = %s",
+        conn.get_dsn_parameters().get("sslmode", "unknown"),
+    )
 
     return conn
 
@@ -80,6 +89,8 @@ def selected_value_to_singer_value_impl(elem, sql_datatype):
         cleaned_elem = elem
     elif sql_datatype == "geometry":
         cleaned_elem = wkb.loads(elem, hex=True).wkt
+    elif sql_datatype in RANGE_TYPES:
+        cleaned_elem = str(elem)
     elif sql_datatype == "money":
         cleaned_elem = elem
     elif isinstance(elem, datetime.datetime):
@@ -136,7 +147,9 @@ def selected_value_to_singer_value_impl(elem, sql_datatype):
 
 def selected_array_to_singer_value(elem, sql_datatype):
     if isinstance(elem, list):
-        return list(map(lambda elem: selected_array_to_singer_value(elem, sql_datatype), elem))
+        return list(
+            map(lambda elem: selected_array_to_singer_value(elem, sql_datatype), elem)
+        )
 
     return selected_value_to_singer_value_impl(elem, sql_datatype)
 
@@ -145,14 +158,19 @@ def selected_value_to_singer_value(elem, sql_datatype):
     # are we dealing with an array?
     if sql_datatype.find("[]") > 0:
         return list(
-            map(lambda elem: selected_array_to_singer_value(elem, sql_datatype), (elem or []))
+            map(
+                lambda elem: selected_array_to_singer_value(elem, sql_datatype),
+                (elem or []),
+            )
         )
 
     return selected_value_to_singer_value_impl(elem, sql_datatype)
 
 
 # pylint: disable=too-many-arguments
-def selected_row_to_singer_message(stream, row, version, columns, time_extracted, md_map):
+def selected_row_to_singer_message(
+    stream, row, version, columns, time_extracted, md_map
+):
     row_to_persist = ()
     for idx, elem in enumerate(row):
         sql_datatype = md_map.get(("properties", columns[idx]))["sql-datatype"]
@@ -171,7 +189,9 @@ def selected_row_to_singer_message(stream, row, version, columns, time_extracted
 
 def hstore_available(conn_info):
     with open_connection(conn_info) as conn:
-        with conn.cursor(cursor_factory=psycopg2.extras.DictCursor, name="stitch_cursor") as cur:
+        with conn.cursor(
+            cursor_factory=psycopg2.extras.DictCursor, name="stitch_cursor"
+        ) as cur:
             cur.execute(
                 """ SELECT installed_version FROM pg_available_extensions WHERE name = 'hstore' """
             )

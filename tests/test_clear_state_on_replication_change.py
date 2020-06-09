@@ -1,4 +1,5 @@
 import unittest
+
 import tap_postgres
 
 tap_stream_id = "chicken_table"
@@ -67,7 +68,11 @@ class TestClearState(unittest.TestCase):
         xmin = "3737373"
         state = {
             "bookmarks": {
-                tap_stream_id: {"version": 1, "xmin": xmin, "last_replication_method": "FULL_TABLE"}
+                tap_stream_id: {
+                    "version": 1,
+                    "xmin": xmin,
+                    "last_replication_method": "FULL_TABLE",
+                }
             }
         }
 
@@ -80,7 +85,9 @@ class TestClearState(unittest.TestCase):
         )
 
         state = {
-            "bookmarks": {tap_stream_id: {"version": 1, "last_replication_method": "FULL_TABLE"}}
+            "bookmarks": {
+                tap_stream_id: {"version": 1, "last_replication_method": "FULL_TABLE"}
+            }
         }
         nascent_state = tap_postgres.clear_state_on_replication_change(
             state, tap_stream_id, "updated_at", "INCREMENTAL"
@@ -129,7 +136,9 @@ class TestClearState(unittest.TestCase):
     # full table tests
     def test_full_table_happy(self):
         state = {
-            "bookmarks": {tap_stream_id: {"version": 88, "last_replication_method": "FULL_TABLE"}}
+            "bookmarks": {
+                tap_stream_id: {"version": 88, "last_replication_method": "FULL_TABLE"}
+            }
         }
         nascent_state = tap_postgres.clear_state_on_replication_change(
             state, tap_stream_id, None, "FULL_TABLE"
@@ -178,7 +187,8 @@ class TestClearState(unittest.TestCase):
             state, tap_stream_id, None, "FULL_TABLE"
         )
         self.assertEqual(
-            nascent_state, {"bookmarks": {tap_stream_id: {"last_replication_method": "FULL_TABLE"}}}
+            nascent_state,
+            {"bookmarks": {tap_stream_id: {"last_replication_method": "FULL_TABLE"}}},
         )
 
     def test_log_based_to_full_table(self):
@@ -195,7 +205,8 @@ class TestClearState(unittest.TestCase):
             state, tap_stream_id, None, "FULL_TABLE"
         )
         self.assertEqual(
-            nascent_state, {"bookmarks": {tap_stream_id: {"last_replication_method": "FULL_TABLE"}}}
+            nascent_state,
+            {"bookmarks": {tap_stream_id: {"last_replication_method": "FULL_TABLE"}}},
         )
 
     # log based tests
@@ -203,7 +214,11 @@ class TestClearState(unittest.TestCase):
         lsn = 43434343
         state = {
             "bookmarks": {
-                tap_stream_id: {"version": 88, "last_replication_method": "LOG_BASED", "lsn": lsn}
+                tap_stream_id: {
+                    "version": 88,
+                    "last_replication_method": "LOG_BASED",
+                    "lsn": lsn,
+                }
             }
         }
         nascent_state = tap_postgres.clear_state_on_replication_change(
@@ -243,20 +258,26 @@ class TestClearState(unittest.TestCase):
             state, tap_stream_id, None, "LOG_BASED"
         )
         self.assertEqual(
-            nascent_state, {"bookmarks": {tap_stream_id: {"last_replication_method": "LOG_BASED"}}}
+            nascent_state,
+            {"bookmarks": {tap_stream_id: {"last_replication_method": "LOG_BASED"}}},
         )
 
     def test_full_table_to_log_based(self):
         state = {
             "bookmarks": {
-                tap_stream_id: {"version": 2222, "last_replication_method": "FULL_TABLE", "xmin": 2}
+                tap_stream_id: {
+                    "version": 2222,
+                    "last_replication_method": "FULL_TABLE",
+                    "xmin": 2,
+                }
             }
         }
         nascent_state = tap_postgres.clear_state_on_replication_change(
             state, tap_stream_id, None, "LOG_BASED"
         )
         self.assertEqual(
-            nascent_state, {"bookmarks": {tap_stream_id: {"last_replication_method": "LOG_BASED"}}}
+            nascent_state,
+            {"bookmarks": {tap_stream_id: {"last_replication_method": "LOG_BASED"}}},
         )
 
 

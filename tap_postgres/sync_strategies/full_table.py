@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 # pylint: disable=missing-docstring,not-an-iterable,too-many-locals,too-many-arguments,invalid-name,too-many-return-statements,too-many-branches,len-as-condition,too-many-nested-blocks,wrong-import-order,duplicate-code  # noqa
 
-from tap_postgres.logger import LOGGER
 import copy
 import time
+
 import psycopg2
 import psycopg2.extras
+
 import singer
-from singer import utils
 import singer.metrics as metrics
+from singer import utils
+
 import tap_postgres.db as post_db
+from tap_postgres.logger import LOGGER
 
 
 def sync_view(conn_info, stream, state, desired_columns, md_map):
@@ -19,7 +22,9 @@ def sync_view(conn_info, stream, state, desired_columns, md_map):
     first_run = singer.get_bookmark(state, stream["tap_stream_id"], "version") is None
     nascent_stream_version = int(time.time() * 1000)
 
-    state = singer.write_bookmark(state, stream["tap_stream_id"], "version", nascent_stream_version)
+    state = singer.write_bookmark(
+        state, stream["tap_stream_id"], "version", nascent_stream_version
+    )
     singer.write_message(singer.StateMessage(value=copy.deepcopy(state)))
 
     schema_name = md_map.get(()).get("schema-name")
@@ -42,7 +47,9 @@ def sync_view(conn_info, stream, state, desired_columns, md_map):
                 cur.itersize = post_db.cursor_iter_size
                 select_sql = "SELECT {} FROM {}".format(
                     ",".join(escaped_columns),
-                    post_db.fully_qualified_table_name(schema_name, stream["table_name"]),
+                    post_db.fully_qualified_table_name(
+                        schema_name, stream["table_name"]
+                    ),
                 )
 
                 LOGGER.info("select %s with itersize %s", select_sql, cur.itersize)
@@ -51,12 +58,19 @@ def sync_view(conn_info, stream, state, desired_columns, md_map):
                 rows_saved = 0
                 for rec in cur:
                     record_message = post_db.selected_row_to_singer_message(
-                        stream, rec, nascent_stream_version, desired_columns, time_extracted, md_map
+                        stream,
+                        rec,
+                        nascent_stream_version,
+                        desired_columns,
+                        time_extracted,
+                        md_map,
                     )
                     singer.write_message(record_message)
                     rows_saved = rows_saved + 1
                     if rows_saved % conn_info["emit_state_every_n_rows"] == 0:
-                        singer.write_message(singer.StateMessage(value=copy.deepcopy(state)))
+                        singer.write_message(
+                            singer.StateMessage(value=copy.deepcopy(state))
+                        )
 
                     counter.increment()
 
@@ -77,9 +91,13 @@ def sync_table(conn_info, stream, state, desired_columns, md_map):
     if singer.get_bookmark(state, stream["tap_stream_id"], "xmin") is None:
         nascent_stream_version = int(time.time() * 1000)
     else:
-        nascent_stream_version = singer.get_bookmark(state, stream["tap_stream_id"], "version")
+        nascent_stream_version = singer.get_bookmark(
+            state, stream["tap_stream_id"], "version"
+        )
 
-    state = singer.write_bookmark(state, stream["tap_stream_id"], "version", nascent_stream_version)
+    state = singer.write_bookmark(
+        state, stream["tap_stream_id"], "version", nascent_stream_version
+    )
     singer.write_message(singer.StateMessage(value=copy.deepcopy(state)))
 
     schema_name = md_map.get(()).get("schema-name")
@@ -128,16 +146,23 @@ def sync_table(conn_info, stream, state, desired_columns, md_map):
                                       FROM {} where age(xmin::xid) <= age('{}'::xid)
                                      ORDER BY xmin::text::bigint ASC""".format(
                         ",".join(escaped_columns),
-                        post_db.fully_qualified_table_name(schema_name, stream["table_name"]),
+                        post_db.fully_qualified_table_name(
+                            schema_name, stream["table_name"]
+                        ),
                         xmin,
                     )
                 else:
-                    LOGGER.info("Beginning new Full Table replication %s", nascent_stream_version)
+                    LOGGER.info(
+                        "Beginning new Full Table replication %s",
+                        nascent_stream_version,
+                    )
                     select_sql = """SELECT {}, xmin::text::bigint
                                       FROM {}
                                      ORDER BY xmin::text::bigint ASC""".format(
                         ",".join(escaped_columns),
-                        post_db.fully_qualified_table_name(schema_name, stream["table_name"]),
+                        post_db.fully_qualified_table_name(
+                            schema_name, stream["table_name"]
+                        ),
                     )
 
                 LOGGER.info("select %s with itersize %s", select_sql, cur.itersize)
@@ -149,13 +174,22 @@ def sync_table(conn_info, stream, state, desired_columns, md_map):
                     xmin = rec["xmin"]
                     rec = rec[:-1]
                     record_message = post_db.selected_row_to_singer_message(
-                        stream, rec, nascent_stream_version, desired_columns, time_extracted, md_map
+                        stream,
+                        rec,
+                        nascent_stream_version,
+                        desired_columns,
+                        time_extracted,
+                        md_map,
                     )
                     singer.write_message(record_message)
-                    state = singer.write_bookmark(state, stream["tap_stream_id"], "xmin", xmin)
+                    state = singer.write_bookmark(
+                        state, stream["tap_stream_id"], "xmin", xmin
+                    )
                     rows_saved = rows_saved + 1
                     if rows_saved % conn_info["emit_state_every_n_rows"] == 0:
-                        singer.write_message(singer.StateMessage(value=copy.deepcopy(state)))
+                        singer.write_message(
+                            singer.StateMessage(value=copy.deepcopy(state))
+                        )
 
                     counter.increment()
 
