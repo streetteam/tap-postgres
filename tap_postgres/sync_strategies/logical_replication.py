@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
 # pylint: disable=missing-docstring,not-an-iterable,too-many-locals,too-many-arguments,invalid-name,too-many-return-statements,too-many-branches,len-as-condition,too-many-nested-blocks,wrong-import-order,duplicate-code, anomalous-backslash-in-string, too-many-statements, singleton-comparison, consider-using-in  # noqa
 
-from tap_postgres.logger import LOGGER
-import singer
+import copy
 import datetime
 import decimal
-from singer import utils, get_bookmark
-import singer.metadata as metadata
-import tap_postgres.db as post_db
-import tap_postgres.sync_strategies.common as sync_common
-from dateutil.parser import parse
-import psycopg2
-from psycopg2 import sql
-import copy
-from select import select
-from functools import reduce
 import json
 import re
+from functools import reduce
+from select import select
+
+import psycopg2
+from dateutil.parser import parse
+from psycopg2 import sql
+
+import singer
+import singer.metadata as metadata
+from singer import get_bookmark, utils
+
+import tap_postgres.db as post_db
+import tap_postgres.sync_strategies.common as sync_common
+from tap_postgres.logger import LOGGER
 
 
 def get_pg_version(cur):
@@ -41,7 +44,9 @@ def fetch_current_lsn(conn_config):
                 cur.execute("SELECT pg_current_wal_lsn()")
             else:
                 raise Exception(
-                    "unable to fetch current lsn for PostgresQL version {}".format(version)
+                    "unable to fetch current lsn for PostgresQL version {}".format(
+                        version
+                    )
                 )
 
             current_lsn = cur.fetchone()[0]
@@ -87,7 +92,9 @@ def create_hstore_elem(conn_info, elem):
             query = create_hstore_elem_query(elem)
             cur.execute(query)
             res = cur.fetchone()[0]
-            hstore_elem = reduce(tuples_to_map, [res[i : i + 2] for i in range(0, len(res), 2)], {})
+            hstore_elem = reduce(
+                tuples_to_map, [res[i : i + 2] for i in range(0, len(res), 2)], {}
+            )
             return hstore_elem
 
 
@@ -137,7 +144,10 @@ def create_array_elem(elem, sql_datatype, conn_info):
                 cast_datatype = "text[]"
             elif sql_datatype in ("time without time zone[]", "time with time zone[]"):
                 cast_datatype = "text[]"
-            elif sql_datatype in ("timestamp with time zone[]", "timestamp without time zone[]"):
+            elif sql_datatype in (
+                "timestamp with time zone[]",
+                "timestamp without time zone[]",
+            ):
                 cast_datatype = "text[]"
             elif sql_datatype == "uuid[]":
                 cast_datatype = "text[]"
@@ -146,7 +156,9 @@ def create_array_elem(elem, sql_datatype, conn_info):
                 # custom datatypes like enums
                 cast_datatype = "text[]"
 
-            sql_stmt = """SELECT $stitch_quote${}$stitch_quote$::{}""".format(elem, cast_datatype)
+            sql_stmt = """SELECT $stitch_quote${}$stitch_quote$::{}""".format(
+                elem, cast_datatype
+            )
             cur.execute(sql_stmt)
             res = cur.fetchone()[0]
             return res
@@ -189,13 +201,20 @@ def selected_value_to_singer_value_impl(elem, og_sql_datatype, conn_info):
     if isinstance(elem, str):
         return elem
 
-    raise Exception("do not know how to marshall value of type {}".format(elem.__class__))
+    raise Exception(
+        "do not know how to marshall value of type {}".format(elem.__class__)
+    )
 
 
 def selected_array_to_singer_value(elem, sql_datatype, conn_info):
     if isinstance(elem, list):
         return list(
-            map(lambda elem: selected_array_to_singer_value(elem, sql_datatype, conn_info), elem)
+            map(
+                lambda elem: selected_array_to_singer_value(
+                    elem, sql_datatype, conn_info
+                ),
+                elem,
+            )
         )
 
     return selected_value_to_singer_value_impl(elem, sql_datatype, conn_info)
@@ -207,7 +226,9 @@ def selected_value_to_singer_value(elem, sql_datatype, conn_info):
         cleaned_elem = create_array_elem(elem, sql_datatype, conn_info)
         return list(
             map(
-                lambda elem: selected_array_to_singer_value(elem, sql_datatype, conn_info),
+                lambda elem: selected_array_to_singer_value(
+                    elem, sql_datatype, conn_info
+                ),
                 (cleaned_elem or []),
             )
         )
@@ -215,9 +236,13 @@ def selected_value_to_singer_value(elem, sql_datatype, conn_info):
     return selected_value_to_singer_value_impl(elem, sql_datatype, conn_info)
 
 
-def row_to_singer_message(stream, row, version, columns, time_extracted, md_map, conn_info):
+def row_to_singer_message(
+    stream, row, version, columns, time_extracted, md_map, conn_info
+):
     row_to_persist = ()
-    md_map[("properties", "_sdc_deleted_at")] = {"sql-datatype": "timestamp with time zone"}
+    md_map[("properties", "_sdc_deleted_at")] = {
+        "sql-datatype": "timestamp with time zone"
+    }
     md_map[("properties", "_sdc_lsn")] = {"sql-datatype": "character varying"}
 
     for idx, elem in enumerate(row):
@@ -249,7 +274,9 @@ def consume_message(streams, state, msg, time_extracted, conn_info, end_lsn):
         streams_lookup[s["tap_stream_id"]] = s
 
     for c in payload["change"]:
-        tap_stream_id = post_db.compute_tap_stream_id(conn_info["dbname"], c["schema"], c["table"])
+        tap_stream_id = post_db.compute_tap_stream_id(
+            conn_info["dbname"], c["schema"], c["table"]
+        )
         if streams_lookup.get(tap_stream_id) is None:
             continue
 
@@ -383,7 +410,9 @@ def locate_replication_slot(conn_info):
 
 
 def sync_tables(conn_info, logical_streams, state, end_lsn):
-    start_lsn = min([get_bookmark(state, s["tap_stream_id"], "lsn") for s in logical_streams])
+    start_lsn = min(
+        [get_bookmark(state, s["tap_stream_id"], "lsn") for s in logical_streams]
+    )
     time_extracted = utils.now()
     slot = locate_replication_slot(conn_info)
     last_lsn_processed = None
@@ -410,14 +439,19 @@ def sync_tables(conn_info, logical_streams, state, end_lsn):
                 cur.start_replication(slot_name=slot, decode=True, start_lsn=start_lsn)
             except psycopg2.ProgrammingError:
                 raise Exception(
-                    "unable to start replication with logical replication slot {}".format(slot)
+                    "unable to start replication with logical replication slot {}".format(
+                        slot
+                    )
                 )
 
             rows_saved = 0
             while True:
                 poll_duration = (datetime.datetime.now() - begin_ts).total_seconds()
                 if poll_duration > poll_total_seconds:
-                    LOGGER.info("breaking after %s seconds of polling with no data", poll_duration)
+                    LOGGER.info(
+                        "breaking after %s seconds of polling with no data",
+                        poll_duration,
+                    )
                     break
 
                 msg = cur.read_message()
@@ -434,7 +468,9 @@ def sync_tables(conn_info, logical_streams, state, end_lsn):
                     last_lsn_processed = msg.data_start
                     rows_saved = rows_saved + 1
                     if rows_saved % conn_info["emit_state_every_n_rows"] == 0:
-                        singer.write_message(singer.StateMessage(value=copy.deepcopy(state)))
+                        singer.write_message(
+                            singer.StateMessage(value=copy.deepcopy(state))
+                        )
 
                 else:
                     now = datetime.datetime.now()
@@ -460,7 +496,9 @@ def sync_tables(conn_info, logical_streams, state, end_lsn):
                 s["tap_stream_id"],
                 last_lsn_processed,
             )
-            state = singer.write_bookmark(state, s["tap_stream_id"], "lsn", last_lsn_processed)
+            state = singer.write_bookmark(
+                state, s["tap_stream_id"], "lsn", last_lsn_processed
+            )
 
     singer.write_message(singer.StateMessage(value=copy.deepcopy(state)))
     return state

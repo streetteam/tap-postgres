@@ -1,12 +1,14 @@
-from singer import get_logger, metadata
-from nose.tools import nottest
-import psycopg2
-import singer
-import os
+import datetime
 import decimal
 import math
-import datetime
+import os
+
+import psycopg2
+from nose.tools import nottest
 from psycopg2.extensions import quote_ident
+
+import singer
+from singer import get_logger, metadata
 
 LOGGER = get_logger()
 
@@ -110,7 +112,9 @@ def ensure_test_table(table_spec, target_db="postgres"):
             old_table = cur.fetchall()
 
             if len(old_table) != 0:
-                cur.execute("DROP TABLE {} cascade".format(quote_ident(table_spec["name"], cur)))
+                cur.execute(
+                    "DROP TABLE {} cascade".format(quote_ident(table_spec["name"], cur))
+                )
 
             sql = build_table(table_spec, cur)
             LOGGER.info("create table sql: %s", sql)
@@ -215,7 +219,9 @@ def verify_crud_messages(that, caught_messages, pks):
     that.assertTrue(isinstance(caught_messages[13], singer.StateMessage))
 
     # schema includes scn && _sdc_deleted_at because we selected logminer as our replication method
-    that.assertEqual({"type": ["integer"]}, caught_messages[0].schema.get("properties").get("scn"))
+    that.assertEqual(
+        {"type": ["integer"]}, caught_messages[0].schema.get("properties").get("scn")
+    )
     that.assertEqual(
         {"type": ["null", "string"], "format": "date-time"},
         caught_messages[0].schema.get("properties").get("_sdc_deleted_at"),

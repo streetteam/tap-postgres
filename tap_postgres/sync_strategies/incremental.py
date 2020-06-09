@@ -1,12 +1,15 @@
-from tap_postgres.logger import LOGGER
 import copy
 import time
+
 import psycopg2
 import psycopg2.extras
+
 import singer
-from singer import utils
 import singer.metrics as metrics
+from singer import utils
+
 import tap_postgres.db as post_db
+from tap_postgres.logger import LOGGER
 
 
 def fetch_max_replication_key(conn_config, replication_key, schema_name, table_name):
@@ -30,7 +33,9 @@ def sync_table(conn_info, stream, state, desired_columns, md_map):
     if stream_version is None:
         stream_version = int(time.time() * 1000)
 
-    state = singer.write_bookmark(state, stream["tap_stream_id"], "version", stream_version)
+    state = singer.write_bookmark(
+        state, stream["tap_stream_id"], "version", stream_version
+    )
     singer.write_message(singer.StateMessage(value=copy.deepcopy(state)))
 
     schema_name = md_map.get(()).get("schema-name")
@@ -38,7 +43,8 @@ def sync_table(conn_info, stream, state, desired_columns, md_map):
     escaped_columns = map(post_db.prepare_columns_sql, desired_columns)
 
     activate_version_message = singer.ActivateVersionMessage(
-        stream=post_db.calculate_destination_stream_name(stream, md_map), version=stream_version
+        stream=post_db.calculate_destination_stream_name(stream, md_map),
+        version=stream_version,
     )
 
     singer.write_message(activate_version_message)
@@ -47,7 +53,9 @@ def sync_table(conn_info, stream, state, desired_columns, md_map):
     replication_key_value = singer.get_bookmark(
         state, stream["tap_stream_id"], "replication_key_value"
     )
-    replication_key_sql_datatype = md_map.get(("properties", replication_key)).get("sql-datatype")
+    replication_key_sql_datatype = md_map.get(("properties", replication_key)).get(
+        "sql-datatype"
+    )
 
     hstore_available = post_db.hstore_available(conn_info)
     with metrics.record_counter(None) as counter:
@@ -71,14 +79,18 @@ def sync_table(conn_info, stream, state, desired_columns, md_map):
                 cursor_factory=psycopg2.extras.DictCursor, name="stitch_cursor"
             ) as cur:
                 cur.itersize = post_db.cursor_iter_size
-                LOGGER.info("Beginning new incremental replication sync %s", stream_version)
+                LOGGER.info(
+                    "Beginning new incremental replication sync %s", stream_version
+                )
                 if replication_key_value:
                     select_sql = """SELECT {}
                                     FROM {}
                                     WHERE {} > '{}'::{}
                                     ORDER BY {} ASC""".format(
                         ",".join(escaped_columns),
-                        post_db.fully_qualified_table_name(schema_name, stream["table_name"]),
+                        post_db.fully_qualified_table_name(
+                            schema_name, stream["table_name"]
+                        ),
                         post_db.prepare_columns_sql(replication_key),
                         replication_key_value,
                         replication_key_sql_datatype,
@@ -90,11 +102,15 @@ def sync_table(conn_info, stream, state, desired_columns, md_map):
                                     FROM {}
                                     ORDER BY {} ASC""".format(
                         ",".join(escaped_columns),
-                        post_db.fully_qualified_table_name(schema_name, stream["table_name"]),
+                        post_db.fully_qualified_table_name(
+                            schema_name, stream["table_name"]
+                        ),
                         post_db.prepare_columns_sql(replication_key),
                     )
 
-                LOGGER.info("select statement: %s with itersize %s", select_sql, cur.itersize)
+                LOGGER.info(
+                    "select statement: %s with itersize %s", select_sql, cur.itersize
+                )
                 cur.execute(select_sql)
                 LOGGER.info("Query returned - processing results")
 
@@ -102,7 +118,12 @@ def sync_table(conn_info, stream, state, desired_columns, md_map):
 
                 for rec in cur:
                     record_message = post_db.selected_row_to_singer_message(
-                        stream, rec, stream_version, desired_columns, time_extracted, md_map
+                        stream,
+                        rec,
+                        stream_version,
+                        desired_columns,
+                        time_extracted,
+                        md_map,
                     )
                     singer.write_message(record_message)
                     rows_saved = rows_saved + 1
@@ -119,7 +140,9 @@ def sync_table(conn_info, stream, state, desired_columns, md_map):
                         )
 
                     if rows_saved % conn_info["emit_state_every_n_rows"] == 0:
-                        singer.write_message(singer.StateMessage(value=copy.deepcopy(state)))
+                        singer.write_message(
+                            singer.StateMessage(value=copy.deepcopy(state))
+                        )
 
                     counter.increment()
 

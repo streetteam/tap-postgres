@@ -1,11 +1,14 @@
 import unittest
-import tap_postgres
-from singer import get_logger, metadata
+
 from tests.utils import (
-    get_test_connection,
     ensure_test_table,
+    get_test_connection,
     get_test_connection_config,
 )
+
+from singer import get_logger, metadata
+
+import tap_postgres
 
 LOGGER = get_logger()
 
@@ -44,7 +47,9 @@ class Unsupported(unittest.TestCase):
             with get_test_connection() as conn:
                 cur = conn.cursor()
                 cur.execute("""     DROP TYPE IF EXISTS person_composite CASCADE """)
-                cur.execute("""     CREATE TYPE person_composite AS (age int, name text) """)
+                cur.execute(
+                    """     CREATE TYPE person_composite AS (age int, name text) """
+                )
 
             ensure_test_table(table_spec)
 

@@ -1,13 +1,20 @@
 import unittest
+
 import psycopg2
 import psycopg2.extras
-import tap_postgres
-import tap_postgres.db as post_db
-from singer import get_logger, metadata
 from psycopg2.extensions import quote_ident
 
+from singer import get_logger, metadata
+
+import tap_postgres
+import tap_postgres.db as post_db
+
 try:
-    from tests.utils import get_test_connection, ensure_test_table, get_test_connection_config
+    from tests.utils import (
+        get_test_connection,
+        ensure_test_table,
+        get_test_connection_config,
+    )
 except ImportError:
     from utils import get_test_connection, ensure_test_table, get_test_connection_config
 
@@ -47,7 +54,9 @@ class TestStringTableWithPK(unittest.TestCase):
 
         self.assertEqual(len(chicken_streams), 1)
         stream_dict = chicken_streams[0]
-        self.assertEqual(TestStringTableWithPK.table_name, stream_dict.get("table_name"))
+        self.assertEqual(
+            TestStringTableWithPK.table_name, stream_dict.get("table_name")
+        )
         self.assertEqual(TestStringTableWithPK.table_name, stream_dict.get("stream"))
 
         stream_dict.get("metadata").sort(key=lambda md: md["breadcrumb"])
@@ -93,7 +102,11 @@ class TestStringTableWithPK(unittest.TestCase):
         self.assertEqual(
             {
                 "properties": {
-                    "id": {"type": ["integer"], "maximum": 2147483647, "minimum": -2147483648},
+                    "id": {
+                        "type": ["integer"],
+                        "maximum": 2147483647,
+                        "minimum": -2147483648,
+                    },
                     "character-varying_name": {"type": ["null", "string"]},
                     "varchar-name": {"type": ["null", "string"], "maxLength": 28},
                     "char_name": {"type": ["null", "string"], "maxLength": 10},
@@ -132,7 +145,9 @@ class TestIntegerTable(unittest.TestCase):
         self.assertEqual(len(chicken_streams), 1)
         stream_dict = chicken_streams[0]
 
-        self.assertEqual(TestStringTableWithPK.table_name, stream_dict.get("table_name"))
+        self.assertEqual(
+            TestStringTableWithPK.table_name, stream_dict.get("table_name")
+        )
         self.assertEqual(TestStringTableWithPK.table_name, stream_dict.get("stream"))
 
         stream_dict.get("metadata").sort(key=lambda md: md["breadcrumb"])
@@ -688,7 +703,10 @@ class TestHStoreTable(unittest.TestCase):
                 self.assertEqual(
                     {
                         "properties": {
-                            "our_hstore": {"type": ["null", "object"], "properties": {}},
+                            "our_hstore": {
+                                "type": ["null", "object"],
+                                "properties": {},
+                            },
                             "our_pk": {"type": ["object"], "properties": {}},
                         },
                         "type": "object",
@@ -728,7 +746,9 @@ class TestEnumTable(unittest.TestCase):
         with get_test_connection() as conn:
             cur = conn.cursor()
             cur.execute("""     DROP TYPE IF EXISTS mood_enum CASCADE """)
-            cur.execute("""     CREATE TYPE mood_enum AS ENUM ('sad', 'ok', 'happy'); """)
+            cur.execute(
+                """     CREATE TYPE mood_enum AS ENUM ('sad', 'ok', 'happy'); """
+            )
 
         ensure_test_table(table_spec)
 
@@ -914,11 +934,15 @@ class TestArraysTable(unittest.TestCase):
                         "properties": {
                             "our_int_array_pk": {
                                 "type": ["null", "array"],
-                                "items": {"$ref": "#/definitions/sdc_recursive_integer_array"},
+                                "items": {
+                                    "$ref": "#/definitions/sdc_recursive_integer_array"
+                                },
                             },
                             "our_string_array": {
                                 "type": ["null", "array"],
-                                "items": {"$ref": "#/definitions/sdc_recursive_string_array"},
+                                "items": {
+                                    "$ref": "#/definitions/sdc_recursive_string_array"
+                                },
                             },
                         },
                         "type": "object",
@@ -964,7 +988,10 @@ class TestMultiDB(unittest.TestCase):
                     "properties": {
                         "our_date": {"type": ["string"], "format": "date-time"},
                         "our_ts": {"type": ["null", "string"], "format": "date-time"},
-                        "our_ts_tz": {"type": ["null", "string"], "format": "date-time"},
+                        "our_ts_tz": {
+                            "type": ["null", "string"],
+                            "format": "date-time",
+                        },
                         "our_time": {"type": ["null", "string"]},
                         "our_time_tz": {"type": ["null", "string"]},
                     },
@@ -973,7 +1000,11 @@ class TestMultiDB(unittest.TestCase):
                 },
                 stream_dict.get("schema"),
             )
-            db_name = metadata.to_map(stream_dict.get("metadata")).get(()).get("database-name")
+            db_name = (
+                metadata.to_map(stream_dict.get("metadata"))
+                .get(())
+                .get("database-name")
+            )
 
             self.assertEqual(
                 metadata.to_map(stream_dict.get("metadata")),
@@ -1045,7 +1076,9 @@ class TestArraysLikeTable(unittest.TestCase):
         conn_config = get_test_connection_config()
         streams = tap_postgres.do_discovery(conn_config)
         chicken_streams = [
-            s for s in streams if s["tap_stream_id"] == "postgres-public-LIKE CHICKEN TIMES"
+            s
+            for s in streams
+            if s["tap_stream_id"] == "postgres-public-LIKE CHICKEN TIMES"
         ]
         self.assertEqual(len(chicken_streams), 1)
         stream_dict = chicken_streams[0]
@@ -1130,7 +1163,9 @@ class TestColumnGrants(unittest.TestCase):
             LOGGER.info(sql)
             cur.execute(sql)
 
-            sql = """ CREATE USER {} WITH PASSWORD '{}' """.format(self.user, self.password)
+            sql = """ CREATE USER {} WITH PASSWORD '{}' """.format(
+                self.user, self.password
+            )
             LOGGER.info(sql)
             cur.execute(sql)
 
@@ -1156,7 +1191,9 @@ class TestColumnGrants(unittest.TestCase):
         self.assertEqual(len(chicken_streams), 1)
         stream_dict = chicken_streams[0]
 
-        self.assertEqual(TestStringTableWithPK.table_name, stream_dict.get("table_name"))
+        self.assertEqual(
+            TestStringTableWithPK.table_name, stream_dict.get("table_name")
+        )
         self.assertEqual(TestStringTableWithPK.table_name, stream_dict.get("stream"))
 
         stream_dict.get("metadata").sort(key=lambda md: md["breadcrumb"])

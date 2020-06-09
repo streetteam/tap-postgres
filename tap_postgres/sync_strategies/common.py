@@ -1,7 +1,10 @@
 import sys
+
 import simplejson as json
+
 import singer
 from singer import metadata
+
 import tap_postgres.db as post_db
 
 
