@@ -242,7 +242,9 @@ def schema_for_column(c):
 # select typname from pg_attribute  as pga join pg_type as pgt on pgt.oid = pga.atttypid
 # where typlen = -1 and typelem != 0 and pga.attndims > 0;
 def produce_table_info(conn):
-    with conn.cursor(cursor_factory=psycopg2.extras.DictCursor, name="stitch_cursor") as cur:
+    with conn.cursor(
+        cursor_factory=psycopg2.extras.DictCursor, name="stitch_cursor"
+    ) as cur:
         cur.itersize = post_db.cursor_iter_size
         table_info = {}
         # SELECT CASE WHEN $2.typtype = 'd' THEN $2.typbasetype ELSE $1.atttypid END
@@ -393,7 +395,9 @@ def discover_columns(connection, table_info):
             mdata = {}
             columns = table_info[schema_name][table_name]["columns"]
             table_pks = [
-                col_name for col_name, col_info in columns.items() if col_info.is_primary_key
+                col_name
+                for col_name, col_info in columns.items()
+                if col_info.is_primary_key
             ]
             with connection.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
                 cur.execute(" SELECT current_database()")
@@ -402,11 +406,16 @@ def discover_columns(connection, table_info):
             metadata.write(mdata, (), "table-key-properties", table_pks)
             metadata.write(mdata, (), "schema-name", schema_name)
             metadata.write(mdata, (), "database-name", database_name)
-            metadata.write(mdata, (), "row-count", table_info[schema_name][table_name]["row_count"])
-            metadata.write(mdata, (), "is-view", table_info[schema_name][table_name].get("is_view"))
+            metadata.write(
+                mdata, (), "row-count", table_info[schema_name][table_name]["row_count"]
+            )
+            metadata.write(
+                mdata, (), "is-view", table_info[schema_name][table_name].get("is_view")
+            )
 
             column_schemas = {
-                col_name: schema_for_column(col_info) for col_name, col_info in columns.items()
+                col_name: schema_for_column(col_info)
+                for col_name, col_info in columns.items()
             }
 
             schema = {"type": "object", "properties": column_schemas, "definitions": {}}
@@ -423,13 +432,19 @@ def discover_columns(connection, table_info):
                     mdata = metadata.write(
                         mdata, ("properties", c_name), "selected-by-default", False
                     )
-                elif table_info[schema_name][table_name]["columns"][c_name].is_primary_key:
-                    mdata = metadata.write(mdata, ("properties", c_name), "inclusion", "automatic")
+                elif table_info[schema_name][table_name]["columns"][
+                    c_name
+                ].is_primary_key:
+                    mdata = metadata.write(
+                        mdata, ("properties", c_name), "inclusion", "automatic"
+                    )
                     mdata = metadata.write(
                         mdata, ("properties", c_name), "selected-by-default", True
                     )
                 else:
-                    mdata = metadata.write(mdata, ("properties", c_name), "inclusion", "available")
+                    mdata = metadata.write(
+                        mdata, ("properties", c_name), "inclusion", "available"
+                    )
                     mdata = metadata.write(
                         mdata, ("properties", c_name), "selected-by-default", True
                     )
@@ -481,7 +496,9 @@ def do_discovery(conn_config):
     all_streams = []
 
     with post_db.open_connection(conn_config) as conn:
-        with conn.cursor(cursor_factory=psycopg2.extras.DictCursor, name="stitch_cursor") as cur:
+        with conn.cursor(
+            cursor_factory=psycopg2.extras.DictCursor, name="stitch_cursor"
+        ) as cur:
             cur.itersize = post_db.cursor_iter_size
             sql = """SELECT datname
             FROM pg_database
@@ -495,7 +512,9 @@ def do_discovery(conn_config):
             cur.execute(sql)
             found_dbs = (row[0] for row in cur.fetchall())
 
-    filter_dbs = filter(lambda dbname: attempt_connection_to_db(conn_config, dbname), found_dbs)
+    filter_dbs = filter(
+        lambda dbname: attempt_connection_to_db(conn_config, dbname), found_dbs
+    )
 
     for db_row in filter_dbs:
         dbname = db_row
@@ -521,9 +540,13 @@ def do_sync_full_table(conn_config, stream, state, desired_columns, md_map):
     LOGGER.info("Stream %s is using full_table replication", stream["tap_stream_id"])
     sync_common.send_schema_message(stream, [])
     if md_map.get((), {}).get("is-view"):
-        state = full_table.sync_view(conn_config, stream, state, desired_columns, md_map)
+        state = full_table.sync_view(
+            conn_config, stream, state, desired_columns, md_map
+        )
     else:
-        state = full_table.sync_table(conn_config, stream, state, desired_columns, md_map)
+        state = full_table.sync_table(
+            conn_config, stream, state, desired_columns, md_map
+        )
     return state
 
 
@@ -538,7 +561,14 @@ def do_sync_incremental(conn_config, stream, state, desired_columns, md_map):
 
     stream_state = state.get("bookmarks", {}).get(stream["tap_stream_id"])
     illegal_bk_keys = set(stream_state.keys()).difference(
-        set(["replication_key", "replication_key_value", "version", "last_replication_method"])
+        set(
+            [
+                "replication_key",
+                "replication_key_value",
+                "version",
+                "last_replication_method",
+            ]
+        )
     )
     if len(illegal_bk_keys) != 0:
         raise Exception("invalid keys found in state: {}".format(illegal_bk_keys))
@@ -553,15 +583,23 @@ def do_sync_incremental(conn_config, stream, state, desired_columns, md_map):
     return state
 
 
-def clear_state_on_replication_change(state, tap_stream_id, replication_key, replication_method):
+def clear_state_on_replication_change(
+    state, tap_stream_id, replication_key, replication_method
+):
     # user changed replication, nuke state
-    last_replication_method = singer.get_bookmark(state, tap_stream_id, "last_replication_method")
-    if last_replication_method is not None and (replication_method != last_replication_method):
+    last_replication_method = singer.get_bookmark(
+        state, tap_stream_id, "last_replication_method"
+    )
+    if last_replication_method is not None and (
+        replication_method != last_replication_method
+    ):
         state = singer.reset_stream(state, tap_stream_id)
 
     # key changed
     if replication_method == "INCREMENTAL":
-        if replication_key != singer.get_bookmark(state, tap_stream_id, "replication_key"):
+        if replication_key != singer.get_bookmark(
+            state, tap_stream_id, "replication_key"
+        ):
             state = singer.reset_stream(state, tap_stream_id)
 
     state = singer.write_bookmark(
@@ -603,14 +641,19 @@ def sync_method_for_streams(streams, state, default_replication_method):
 
         if len(desired_columns) == 0:
             LOGGER.warning(
-                "There are no columns selected for stream %s, skipping it", stream["tap_stream_id"]
+                "There are no columns selected for stream %s, skipping it",
+                stream["tap_stream_id"],
             )
             continue
 
-        if replication_method == "LOG_BASED" and stream_metadata.get((), {}).get("is-view"):
+        if replication_method == "LOG_BASED" and stream_metadata.get((), {}).get(
+            "is-view"
+        ):
             raise Exception(
                 "Logical Replication is NOT supported for views."
-                "Please change the replication method for {}".format(stream["tap_stream_id"])
+                "Please change the replication method for {}".format(
+                    stream["tap_stream_id"]
+                )
             )
 
         if replication_method == "FULL_TABLE":
@@ -635,9 +678,9 @@ def sync_method_for_streams(streams, state, default_replication_method):
                 "Xmin found(%s) in state implying full-table replication but no lsn is present"
             )
 
-        elif not get_bookmark(state, stream["tap_stream_id"], "xmin") and not get_bookmark(
-            state, stream["tap_stream_id"], "lsn"
-        ):
+        elif not get_bookmark(
+            state, stream["tap_stream_id"], "xmin"
+        ) and not get_bookmark(state, stream["tap_stream_id"], "lsn"):
             # initial full-table phase of logical replication
             lookup[stream["tap_stream_id"]] = "logical_initial"
             traditional_steams.append(stream)
@@ -653,7 +696,9 @@ def sync_method_for_streams(streams, state, default_replication_method):
 
 def sync_traditional_stream(conn_config, stream, state, sync_method, end_lsn):
     LOGGER.info(
-        "Beginning sync of stream(%s) with sync method(%s)", stream["tap_stream_id"], sync_method
+        "Beginning sync of stream(%s) with sync method(%s)",
+        stream["tap_stream_id"],
+        sync_method,
     )
     md_map = metadata.to_map(stream["metadata"])
     conn_config["dbname"] = md_map.get(()).get("database-name")
@@ -666,7 +711,8 @@ def sync_traditional_stream(conn_config, stream, state, sync_method, end_lsn):
 
     if len(desired_columns) == 0:
         LOGGER.warning(
-            "There are no columns selected for stream %s, skipping it", stream["tap_stream_id"]
+            "There are no columns selected for stream %s, skipping it",
+            stream["tap_stream_id"],
         )
         return state
 
@@ -684,16 +730,22 @@ def sync_traditional_stream(conn_config, stream, state, sync_method, end_lsn):
         state = singer.write_bookmark(state, stream["tap_stream_id"], "lsn", end_lsn)
 
         sync_common.send_schema_message(stream, [])
-        state = full_table.sync_table(conn_config, stream, state, desired_columns, md_map)
+        state = full_table.sync_table(
+            conn_config, stream, state, desired_columns, md_map
+        )
         state = singer.write_bookmark(state, stream["tap_stream_id"], "xmin", None)
     elif sync_method == "logical_initial_interrupted":
         state = singer.set_currently_syncing(state, stream["tap_stream_id"])
         LOGGER.info("Initial stage of full table sync was interrupted. resuming...")
         sync_common.send_schema_message(stream, [])
-        state = full_table.sync_table(conn_config, stream, state, desired_columns, md_map)
+        state = full_table.sync_table(
+            conn_config, stream, state, desired_columns, md_map
+        )
     else:
         raise Exception(
-            "unknown sync method {} for stream {}".format(sync_method, stream["tap_stream_id"])
+            "unknown sync method {} for stream {}".format(
+                sync_method, stream["tap_stream_id"]
+            )
         )
 
     state = singer.set_currently_syncing(state, None)
@@ -715,7 +767,9 @@ def sync_logical_streams(conn_config, logical_streams, state, end_lsn):
             )
         )
 
-        state = logical_replication.sync_tables(conn_config, logical_streams, state, end_lsn)
+        state = logical_replication.sync_tables(
+            conn_config, logical_streams, state, end_lsn
+        )
 
     return state
 
@@ -737,21 +791,27 @@ def register_type_adapters(conn_config):
             cur.execute("SELECT typarray FROM pg_type where typname = 'bit'")
             bit_array_oid = cur.fetchone()[0]
             psycopg2.extensions.register_type(
-                psycopg2.extensions.new_array_type((bit_array_oid,), "BIT[]", psycopg2.STRING)
+                psycopg2.extensions.new_array_type(
+                    (bit_array_oid,), "BIT[]", psycopg2.STRING
+                )
             )
 
             # UUID[]
             cur.execute("SELECT typarray FROM pg_type where typname = 'uuid'")
             uuid_array_oid = cur.fetchone()[0]
             psycopg2.extensions.register_type(
-                psycopg2.extensions.new_array_type((uuid_array_oid,), "UUID[]", psycopg2.STRING)
+                psycopg2.extensions.new_array_type(
+                    (uuid_array_oid,), "UUID[]", psycopg2.STRING
+                )
             )
 
             # money[]
             cur.execute("SELECT typarray FROM pg_type where typname = 'money'")
             money_array_oid = cur.fetchone()[0]
             psycopg2.extensions.register_type(
-                psycopg2.extensions.new_array_type((money_array_oid,), "MONEY[]", psycopg2.STRING)
+                psycopg2.extensions.new_array_type(
+                    (money_array_oid,), "MONEY[]", psycopg2.STRING
+                )
             )
 
             # json and jsbon
@@ -787,7 +847,9 @@ def do_sync(conn_config, catalog, default_replication_method, state):
     currently_syncing = singer.get_currently_syncing(state)
     streams = list(filter(is_selected_via_metadata, catalog["streams"]))
     streams.sort(key=lambda s: s["tap_stream_id"])
-    LOGGER.info("Selected streams: %s ", list(map(lambda s: s["tap_stream_id"], streams)))
+    LOGGER.info(
+        "Selected streams: %s ", list(map(lambda s: s["tap_stream_id"], streams))
+    )
     if any_logical_streams(streams, default_replication_method):
         LOGGER.info("Use of logical replication requires fetching an lsn...")
         end_lsn = logical_replication.fetch_current_lsn(conn_config)
@@ -802,7 +864,9 @@ def do_sync(conn_config, catalog, default_replication_method, state):
     if currently_syncing:
         LOGGER.info("found currently_syncing: %s", currently_syncing)
         currently_syncing_stream = list(
-            filter(lambda s: s["tap_stream_id"] == currently_syncing, traditional_streams)
+            filter(
+                lambda s: s["tap_stream_id"] == currently_syncing, traditional_streams
+            )
         )
         if currently_syncing_stream is None:
             LOGGER.warning(
@@ -811,7 +875,9 @@ def do_sync(conn_config, catalog, default_replication_method, state):
                 list(map(lambda s: s["tap_stream_id"], traditional_streams)),
             )
         other_streams = list(
-            filter(lambda s: s["tap_stream_id"] != currently_syncing, traditional_streams)
+            filter(
+                lambda s: s["tap_stream_id"] != currently_syncing, traditional_streams
+            )
         )
         traditional_streams = currently_syncing_stream + other_streams
     else:
@@ -819,12 +885,19 @@ def do_sync(conn_config, catalog, default_replication_method, state):
 
     for stream in traditional_streams:
         state = sync_traditional_stream(
-            conn_config, stream, state, sync_method_lookup[stream["tap_stream_id"]], end_lsn
+            conn_config,
+            stream,
+            state,
+            sync_method_lookup[stream["tap_stream_id"]],
+            end_lsn,
         )
 
-    logical_streams.sort(key=lambda s: metadata.to_map(s["metadata"]).get(()).get("database-name"))
+    logical_streams.sort(
+        key=lambda s: metadata.to_map(s["metadata"]).get(()).get("database-name")
+    )
     for dbname, streams in itertools.groupby(
-        logical_streams, lambda s: metadata.to_map(s["metadata"]).get(()).get("database-name")
+        logical_streams,
+        lambda s: metadata.to_map(s["metadata"]).get(()).get("database-name"),
     ):
         conn_config["dbname"] = dbname
         state = sync_logical_streams(conn_config, list(streams), state, end_lsn)
@@ -840,12 +913,18 @@ def main_impl():
         "port": args.config["port"],
         "dbname": args.config["dbname"],
         "filter_dbs": args.config.get("filter_dbs"),
-        "emit_state_every_n_rows": int(args.config.get("emit_state_every_n_rows", 1000)),
+        "emit_state_every_n_rows": int(
+            args.config.get("emit_state_every_n_rows", 1000)
+        ),
         "debug_lsn": args.config.get("debug_lsn") == "true",
-        "logical_poll_total_seconds": float(args.config.get("logical_poll_total_seconds", 0)),
+        "logical_poll_total_seconds": float(
+            args.config.get("logical_poll_total_seconds", 0)
+        ),
     }
 
-    LOGGER.setLevel(getattr(logging, args.config.get("loglevel", "INFO").upper(), logging.INFO))
+    LOGGER.setLevel(
+        getattr(logging, args.config.get("loglevel", "INFO").upper(), logging.INFO)
+    )
 
     if args.config.get("ssl") == "true":
         conn_config["sslmode"] = "require"
@@ -860,7 +939,12 @@ def main_impl():
         do_discovery(conn_config)
     elif args.properties:
         state = args.state
-        do_sync(conn_config, args.properties, args.config.get("default_replication_method"), state)
+        do_sync(
+            conn_config,
+            args.properties,
+            args.config.get("default_replication_method"),
+            state,
+        )
     else:
         LOGGER.error("No properties were selected")
 
