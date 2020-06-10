@@ -141,9 +141,17 @@ def schema_for_column_datatype(c):
 
     if data_type == "geometry":
         schema["type"] = nullable_column("string", c.is_primary_key)
+        return schema
 
     if data_type in RANGE_TYPES:
         schema["type"] = nullable_column("string", c.is_primary_key)
+        return schema
+
+    # Possibly could cast to date or time as relevant but for ease of
+    # implementation force a string.
+    if data_type == "interval":
+        schema["type"] = nullable_column("string", c.is_primary_key)
+        return schema
 
     return schema
 
